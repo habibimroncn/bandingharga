@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BandingHarga — Indomaret vs Alfamart</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        indomaret: {
+                            blue: '#005596',
+                            red: '#E31E24',
+                            yellow: '#FFF200',
+                            light: '#EFF6FF'
+                        },
+                        alfamart: {
+                            red: '#ED1C24',
+                            blue: '#0054A6',
+                            yellow: '#FDB913',
+                            light: '#FEF2F2'
+                        }
+                    },
+                    animation: {
+                        'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'flash-green': 'flashGreen 1.2s ease-out',
+                    },
+                    keyframes: {
+                        flashGreen: {
+                            '0%': { backgroundColor: 'rgba(16, 185, 129, 0.25)' },
+                            '100%': { backgroundColor: 'transparent' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased selection:bg-blue-600 selection:text-white">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+    <!-- Header & Auto-Sync Bar -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between py-3.5 gap-3">
+                
+                <!-- Brand Logo & Title -->
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indomaret-blue via-indigo-600 to-alfamart-red flex items-center justify-center text-white shadow-md">
+                            <i class="fa-solid fa-scale-balanced text-lg"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h1 class="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900">
+                                    BandingHarga
+                                </h1>
+                                <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                    <span class="text-indomaret-blue font-bold">Indomaret</span>&nbsp;vs&nbsp;<span class="text-alfamart-red font-bold">Alfamart</span>
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-500">Pantau & bandingkan harga KlikIndomaret vs Alfagift secara real-time</p>
+                        </div>
+                    </div>
+
+                    <!-- Mobile Shopping List Button -->
+                    <button onclick="toggleCartDrawer()" class="md:hidden relative p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition">
+                        <i class="fa-solid fa-cart-shopping text-lg"></i>
+                        <span id="mobile-cart-badge" class="absolute -top-1.5 -right-1.5 bg-emerald-600 text-white text-[11px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow">0</span>
+                    </button>
+                </div>
+
+                <!-- Live Auto-Sync & Controls -->
+                <div class="flex flex-wrap items-center justify-between md:justify-end gap-2 sm:gap-3 bg-slate-50 md:bg-transparent p-2 md:p-0 rounded-xl border md:border-none border-slate-200">
+                    
+                    <!-- Status Indicator & Timestamp -->
+                    <div class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 shadow-xs">
+                        <span class="relative flex h-2.5 w-2.5">
+                            <span id="sync-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span id="sync-dot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                        </span>
+                        <div class="text-xs">
+                            <div class="flex items-center gap-1.5">
+                                <span id="sync-status-text" class="font-semibold text-emerald-700">Live Auto-Sync</span>
+                                <span id="sync-countdown" class="text-[11px] font-mono bg-emerald-50 text-emerald-700 px-1.5 py-0.2 rounded border border-emerald-200">15d</span>
+                            </div>
+                            <div class="text-[11px] text-slate-500">Update: <span id="last-sync-time" class="font-medium text-slate-700">--:--:--</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Auto-Sync Toggle Switch -->
+                    <label class="flex items-center gap-2 cursor-pointer select-none px-2.5 py-1.5 rounded-lg hover:bg-slate-100 transition" title="Aktifkan/Nonaktifkan Sinkronisasi Otomatis setiap 15 detik">
+                        <div class="relative">
+                            <input type="checkbox" id="autosync-toggle" class="sr-only peer" checked onchange="toggleAutoSync()">
+                            <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                        </div>
+                        <span class="text-xs font-medium text-slate-700 hidden sm:inline">Auto</span>
+                    </label>
+
+                    <!-- Manual Sync Button -->
+                    <button id="manual-sync-btn" onclick="triggerManualSync()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-semibold shadow-sm transition cursor-pointer">
+                        <i id="sync-icon" class="fa-solid fa-arrows-rotate"></i>
+                        <span>Sinkronisasi</span>
+                    </button>
+
+                    <!-- Desktop Shopping List Button -->
+                    <button onclick="toggleCartDrawer()" class="hidden md:inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-95 text-white text-xs font-semibold shadow-sm transition cursor-pointer">
+                        <i class="fa-solid fa-basket-shopping text-emerald-400"></i>
+                        <span>Daftar Belanja</span>
+                        <span id="desktop-cart-badge" class="bg-emerald-500 text-slate-950 text-[11px] font-extrabold px-1.5 py-0.2 rounded-full">0</span>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Dashboard Stats Cards -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Card 1: Total Produk -->
+            <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-start justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Produk Dibandingkan</p>
+                    <h3 id="stat-total-products" class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">0</h3>
+                    <p class="text-xs text-slate-500 mt-1.5 flex items-center gap-1">
+                        <i class="fa-solid fa-database text-blue-500"></i> Katalog KlikIndomaret & Alfagift
+                    </p>
+                </div>
+                <div class="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                </div>
+            </div>
+
+            <!-- Card 2: Gerai Paling Hemat -->
+            <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-start justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Gerai Paling Hemat</p>
+                    <h3 id="stat-cheapest-store" class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">Menghitung...</h3>
+                    <p id="stat-cheapest-detail" class="text-xs text-slate-500 mt-1.5">Unggul di 0 dari 0 produk</p>
+                </div>
+                <div id="stat-cheapest-icon-box" class="w-11 h-11 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-crown"></i>
+                </div>
+            </div>
+
+            <!-- Card 3: Rata-rata Selisih -->
+            <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-start justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Rata-Rata Selisih</p>
+                    <h3 id="stat-avg-diff" class="text-2xl sm:text-3xl font-extrabold text-emerald-600 mt-1">Rp 0</h3>
+                    <p id="stat-max-diff" class="text-xs text-slate-500 mt-1.5">Selisih tertinggi: Rp 0</p>
+                </div>
+                <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-piggy-bank"></i>
+                </div>
+            </div>
+
+            <!-- Card 4: Promo Aktif -->
+            <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-start justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Promo / Flash Sale</p>
+                    <h3 id="stat-promo-count" class="text-2xl sm:text-3xl font-extrabold text-rose-600 mt-1">0</h3>
+                    <p class="text-xs text-slate-500 mt-1.5">Harga coret terdeteksi otomatis</p>
+                </div>
+                <div class="w-11 h-11 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-tags"></i>
+                </div>
+            </div>
+        </section>
+
+        <!-- Filter, Search, Sort & Add Product Toolbar -->
+        <section class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-xs space-y-4">
+            <div class="flex flex-col lg:flex-row gap-3">
+                <!-- Search Input -->
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    <input type="text" id="search-input" oninput="applyFilters()" placeholder="Cari nama produk, merek, atau ukuran (misal: Bimoli 2L, Indomie, Ultra Milk)..." class="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition">
+                    <button id="clear-search-btn" onclick="clearSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                        <i class="fa-solid fa-circle-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Filters Row -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 lg:flex gap-2.5">
+                    <!-- Category Filter -->
+                    <select id="category-filter" onchange="applyFilters()" class="px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 cursor-pointer">
+                        <option value="all">Semua Kategori</option>
+                        <option value="Sembako & Minyak">Sembako & Minyak</option>
+                        <option value="Susu & Minuman">Susu & Minuman</option>
+                        <option value="Makanan Ringan">Makanan Ringan</option>
+                        <option value="Perawatan Tubuh">Perawatan Tubuh</option>
+                        <option value="Kebersihan Rumah">Kebersihan Rumah</option>
+                        <option value="Kebutuhan Bayi">Kebutuhan Bayi</option>
+                    </select>
+
+                    <!-- Cheapest Store Filter -->
+                    <select id="store-filter" onchange="applyFilters()" class="px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 cursor-pointer">
+                        <option value="all">Semua Gerai Termurah</option>
+                        <option value="indomaret">Termurah di Indomaret</option>
+                        <option value="alfamart">Termurah di Alfamart</option>
+                        <option value="equal">Harga Sama</option>
+                    </select>
+
+                    <!-- Sort Filter -->
+                    <select id="sort-filter" onchange="applyFilters()" class="px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 cursor-pointer">
+                        <option value="diff-desc">Urutkan: Selisih Terbesar</option>
+                        <option value="cheapest-asc">Urutkan: Harga Termurah</option>
+                        <option value="cheapest-desc">Urutkan: Harga Termahal</option>
+                        <option value="name-asc">Urutkan: Nama A - Z</option>
+                    </select>
+
+                    <!-- Add Custom Product Button -->
+                    <button onclick="openAddModal()" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-sm font-semibold shadow-xs transition cursor-pointer whitespace-nowrap">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Tambah Barang</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Category Pills & Result Count -->
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 text-xs">
+                <div class="flex flex-wrap items-center gap-1.5" id="quick-pills">
+                    <button onclick="setStoreFilter('all')" data-store="all" class="store-pill px-3 py-1 rounded-full font-semibold bg-slate-900 text-white transition cursor-pointer">Semua</button>
+                    <button onclick="setStoreFilter('indomaret')" data-store="indomaret" class="store-pill px-3 py-1 rounded-full font-semibold bg-blue-50 text-indomaret-blue hover:bg-blue-100 transition cursor-pointer">
+                        <i class="fa-solid fa-store mr-1"></i>Indomaret Lebih Murah (<span id="count-indo-win">0</span>)
+                    </button>
+                    <button onclick="setStoreFilter('alfamart')" data-store="alfamart" class="store-pill px-3 py-1 rounded-full font-semibold bg-red-50 text-alfamart-red hover:bg-red-100 transition cursor-pointer">
+                        <i class="fa-solid fa-store mr-1"></i>Alfamart Lebih Murah (<span id="count-alfa-win">0</span>)
+                    </button>
+                    <button onclick="setStoreFilter('equal')" data-store="equal" class="store-pill px-3 py-1 rounded-full font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition cursor-pointer">
+                        Harga Sama (<span id="count-equal-win">0</span>)
+                    </button>
+                </div>
+                <div class="text-slate-500 font-medium">
+                    Menampilkan <span id="showing-count" class="font-bold text-slate-800">0</span> produk
+                </div>
+            </div>
+        </section>
+
+        <!-- Product Comparison Grid -->
+        <section id="products-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+            <!-- Product Cards will be dynamically rendered here -->
+        </section>
+
+        <!-- Empty State (hidden by default) -->
+        <div id="empty-state" class="hidden bg-white rounded-2xl p-12 border border-slate-200 text-center space-y-3">
+            <div class="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-2xl">
+                <i class="fa-solid fa-box-open"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-800">Produk tidak ditemukan</h3>
+            <p class="text-sm text-slate-500 max-w-md mx-auto">Coba ubah kata kunci pencarian atau atur ulang filter kategori dan gerai termurah.</p>
+            <button onclick="resetAllFilters()" class="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition cursor-pointer">
+                <i class="fa-solid fa-rotate-left"></i> Reset Filter
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-8 border-t border-slate-200 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+        <div>
+            <p class="font-semibold text-slate-700">BandingHarga — Simulasi Perbandingan Harga Ritel Indonesia</p>
+            <p class="mt-0.5">Harga disinkronkan secara otomatis setiap 15 detik untuk membantu konsumen berbelanja lebih hemat.</p>
+        </div>
+        <div class="flex items-center gap-4">
+            <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-indomaret-blue"></span> Indomaret</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-alfamart-red"></span> Alfamart</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Termurah</span>
+        </div>
+    </footer>
+
+    <!-- Smart Shopping List Slide-Over Drawer -->
+    <div id="cart-drawer-backdrop" onclick="toggleCartDrawer()" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden transition-opacity"></div>
+    <aside id="cart-drawer" class="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+        <!-- Drawer Header -->
+        <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center">
+                    <i class="fa-solid fa-basket-shopping"></i>
+                </div>
+                <div>
+                    <h2 class="text-base font-bold text-slate-900">Daftar Belanja Pintar</h2>
+                    <p class="text-xs text-slate-500">Kalkulator penghematan otomatis</p>
+                </div>
+            </div>
+            <button onclick="toggleCartDrawer()" class="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/70 transition cursor-pointer">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Drawer Body (Items List) -->
+        <div id="cart-items-container" class="flex-1 overflow-y-auto p-5 space-y-3">
+            <!-- Cart items rendered dynamically -->
+        </div>
+
+        <!-- Drawer Footer (Comparison Totals) -->
+        <div class="p-5 bg-slate-50 border-t border-slate-200 space-y-3">
+            <div class="space-y-2 text-xs">
+                <div class="flex items-center justify-between py-1.5 px-3 rounded-lg bg-blue-50/80 border border-blue-100">
+                    <span class="font-semibold text-indomaret-blue"><i class="fa-solid fa-store mr-1.5"></i>Total Semua di Indomaret:</span>
+                    <span id="cart-total-indo" class="font-bold text-sm text-indomaret-blue">Rp 0</span>
+                </div>
+                <div class="flex items-center justify-between py-1.5 px-3 rounded-lg bg-red-50/80 border border-red-100">
+                    <span class="font-semibold text-alfamart-red"><i class="fa-solid fa-store mr-1.5"></i>Total Semua di Alfamart:</span>
+                    <span id="cart-total-alfa" class="font-bold text-sm text-alfamart-red">Rp 0</span>
+                </div>
+                <div class="p-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold flex items-center gap-1.5">
+                            <i class="fa-solid fa-crown text-amber-300"></i> Split Belanja (Termurah):
+                        </span>
+                        <span id="cart-total-split" class="font-extrabold text-base">Rp 0</span>
+                    </div>
+                    <p id="cart-savings-note" class="text-[11px] text-emerald-100 mt-1">
+                        Tambahkan barang untuk melihat potensi penghematan maksimal!
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex gap-2 pt-1">
+                <button onclick="clearCart()" class="flex-1 py-2.5 px-3 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-semibold transition cursor-pointer">
+                    Kosongkan
+                </button>
+                <button onclick="copyShoppingList()" class="flex-2 py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5">
+                    <i class="fa-regular fa-copy"></i> Salin Daftar Belanja
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Add Custom Product Modal -->
+    <div id="add-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden animate-fade-in">
+            <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-plus text-emerald-600"></i> Tambah Barang Pembanding
+                </h3>
+                <button onclick="closeAddModal()" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg cursor-pointer">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form id="add-product-form" onsubmit="handleAddProduct(event)" class="p-5 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Produk & Merek *</label>
+                    <input type="text" id="new-name" required placeholder="Contoh: Minyak Goreng SunCo 2L" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Kategori *</label>
+                        <select id="new-category" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="Sembako & Minyak">Sembako & Minyak</option>
+                            <option value="Susu & Minuman">Susu & Minuman</option>
+                            <option value="Makanan Ringan">Makanan Ringan</option>
+                            <option value="Perawatan Tubuh">Perawatan Tubuh</option>
+                            <option value="Kebersihan Rumah">Kebersihan Rumah</option>
+                            <option value="Kebutuhan Bayi">Kebutuhan Bayi</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Ukuran / Kemasan *</label>
+                        <input type="text" id="new-size" required placeholder="Contoh: Pouch 2L" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-indomaret-blue mb-1">Harga Indomaret (Rp) *</label>
+                        <input type="number" id="new-indo-price" required min="500" step="100" placeholder="36500" class="w-full px-3.5 py-2 rounded-xl border border-blue-200 bg-blue-50/30 text-sm focus:outline-none focus:ring-2 focus:ring-indomaret-blue">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-alfamart-red mb-1">Harga Alfamart (Rp) *</label>
+                        <input type="number" id="new-alfa-price" required min="500" step="100" placeholder="35900" class="w-full px-3.5 py-2 rounded-xl border border-red-200 bg-red-50/30 text-sm focus:outline-none focus:ring-2 focus:ring-alfamart-red">
+                    </div>
+                </div>
+                <div class="pt-2 flex justify-end gap-2">
+                    <button type="button" onclick="closeAddModal()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-50 cursor-pointer">Batal</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs cursor-pointer">Simpan & Bandingkan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // --- 1. DATA KATALOG PRODUK POPULER INDONESIA (24 PRODUK) ---
+        let products = [
+            {
+                id: 1,
+                name: "Bimoli Minyak Goreng Klasik",
+                size: "Pouch 2 Liter",
+                category: "Sembako & Minyak",
+                indoPrice: 36900,
+                indoOriginal: 41500,
+                alfaPrice: 38500,
+                alfaOriginal: null,
+                updated: false
+            },
+            {
+                id: 2,
+                name: "Tropical Minyak Goreng Botol",
+                size: "Botol 2 Liter",
+                category: "Sembako & Minyak",
+                indoPrice: 39200,
+                indoOriginal: null,
+                alfaPrice: 37400,
+                alfaOriginal: 42000,
+                updated: false
+            },
+            {
+                id: 3,
+                name: "Sania Beras Premium Pulen",
+                size: "Karung 5 kg",
+                category: "Sembako & Minyak",
+                indoPrice: 74500,
+                indoOriginal: null,
+                alfaPrice: 72900,
+                alfaOriginal: 76500,
+                updated: false
+            },
+            {
+                id: 4,
+                name: "Gulaku Gula Pasir Tebu Kuning",
+                size: "Pack 1 kg",
+                category: "Sembako & Minyak",
+                indoPrice: 17500,
+                indoOriginal: 18500,
+                alfaPrice: 17900,
+                alfaOriginal: null,
+                updated: false
+            },
+            {
+                id: 5,
+                name: "Indomie Mi Instan Goreng Spesial",
+                size: "Bungkus 85g (Isi 5)",
+                category: "Sembako & Minyak",
+                indoPrice: 15200,
+                indoOriginal: null,
+                alfaPrice: 14800,
+                alfaOriginal: 16000,
+                updated: false
+            },
+            {
+                id: 6,
+                name: "Bango Kecap Manis Refill",
+                size: "Pouch 520 ml",
+                category: "Sembako & Minyak",
+                indoPrice: 23500,
+                indoOriginal: 26900,
+                alfaPrice: 24900,
+                alfaOriginal: null,
+                updated: false
+            },
+            {
+                id: 7,
+                name: "Ultra Milk UHT Full Cream",
+                size: "Kotak 1000 ml",
+                category: "Susu & Minuman",
+                indoPrice: 19800,
+                indoOriginal: 22400,
+                alfaPrice: 21200,
+                alfaOriginal: null,
+                updated: false
+            },
+            {
+                id: 8,
+                name: "Bear Brand Susu Steril",
+                size: "Kaleng 189 ml",
+                category: "Susu & Minuman",
+                indoPrice: 10500,
+                indoOriginal: null,
+                alfaPrice: 9900,
+                alfaOriginal: 11200,
+                updated: false
+            },
+            {
+                id: 9,
+                name: "Aqua Air Mineral",
+                size: "Botol 600 ml",
+                category: "Susu & Minuman",
+                indoPrice: 4000,
+                indoOriginal: null,
+                alfaPrice: 4000,
+                alfaOriginal: null,
+                updated: false
+            },
+            {
+                id: 10,
+                name: "Teh Botol Sosro Original",
+                size: "Kotak 250 ml (6 pcs)",
+                category: "Susu & Minuman",
+                indoPrice: 18500,
+                indoOriginal: 21000,
+                alfaPrice: 19900,
+                alfaOriginal: null,
+                updated: false
+            },
+            {
+                id: 11,
+                name: "Kapal Api Kopi Bubuk Special",
+                size: "Pack 165g",
+                category: "Susu & Minuman",
+                indoPrice: 16400,
+                indoOriginal: null,
+                alfaPrice: 15500,
+                alfaOriginal: 17500,
+                updated: false
+            },
+            {
+                id: 12,
+                name: "Chitato Keripik Kentang Sapi Panggang",
+                size: "Pack 68g",
+                category: "Makanan Ringan",
+                indoPrice: 11500,
+                indoOriginal: 13200,
+                alfaPrice: 12500,
+                alfaOriginal: null,
+                updated: false
+            },
+            {
+                id: 13,
+                name: "Roma Biskuit Kelapa",
+                size: "Pack 300g",
+                category: "Makanan Ringan",
+                indoPrice: 11900,
+                indoOriginal: null,
+                alfaPrice: 10800,
+                alfaOriginal: 12900,
+                updated: false
+            },
+            {
+                id: 14,
+                name: "SilverQueen Chocolate Cashew",
+                size: "Bar 58g",
+                category: "Makanan Ringan",
+                indoPrice: 14500,
+                indoOriginal: 17900,
+                alfaPrice: 16500,
+                alfaOriginal: null,
+                updated: false
+            },
+            {
+                id: 15,
+                name: "Oreo Vanilla Cream Sandwich",
+                size: "Roll 119.6g",
+                category: "Makanan Ringan",
+                indoPrice: 9500,
+                indoOriginal: null,
+                alfaPrice: 9500,
+                alfaOriginal: null,
+                updated: false
+            },
+            {
+                id: 16,
+                name: "Lifebuoy Sabun Cair Total 10",
+                size: "Refill 400 ml",
+                category: "Perawatan Tubuh",
+                indoPrice: 21900,
+                indoOriginal: 26500,
+                alfaPrice: 23900,
+                alfaOriginal: null,
+                updated: false
+            },
+            {
+                id: 17,
+                name: "Pantene Sampo Anti Ketombe",
+                size: "Botol 290 ml",
+                category: "Perawatan Tubuh",
+                indoPrice: 38900,
+                indoOriginal: null,
+                alfaPrice: 34500,
+                alfaOriginal: 42900,
+                updated: false
+            },
+            {
+                id: 18,
+                name: "Pepsodent Pasta Gigi Pencegah Berlubang",
+                size: "Tube 190g",
+                category: "Perawatan Tubuh",
+                indoPrice: 14200,
+                indoOriginal: 16500,
+                alfaPrice: 14900,
+                alfaOriginal: null,
+                updated: false
+            },
+            {
+                id: 19,
+                name: "Biore UV Aqua Rich Watery Essence",
+                size: "Tube 50g",
+                category: "Perawatan Tubuh",
+                indoPrice: 118000,
+                indoOriginal: 135000,
+                alfaPrice: 112500,
+                alfaOriginal: 135000,
+                updated: false
+            },
+            {
+                id: 20,
+                name: "Rinso Anti Noda Molto Deterjen Cair",
+                size: "Pouch 750 ml",
+                category: "Kebersihan Rumah",
+                indoPrice: 24500,
+                indoOriginal: 29900,
+                alfaPrice: 26500,
+                alfaOriginal: null,
+                updated: false
+            },
+            {
+                id: 21,
+                name: "Sunlight Pencuci Piring Jeruk Nipis",
+                size: "Refill 650 ml",
+                category: "Kebersihan Rumah",
+                indoPrice: 13500,
+                indoOriginal: null,
+                alfaPrice: 12400,
+                alfaOriginal: 15200,
+                updated: false
+            },
+            {
+                id: 22,
+                name: "Paseo Facial Tissue Soft Pack",
+                size: "250 Sheets (2 Ply)",
+                category: "Kebersihan Rumah",
+                indoPrice: 15900,
+                indoOriginal: 18500,
+                alfaPrice: 16900,
+                alfaOriginal: null,
+                updated: false
+            },
+            {
+                id: 23,
+                name: "MamyPoko Pants X-tra Kering M34",
+                size: "Bag Isi 34",
+                category: "Kebutuhan Bayi",
+                indoPrice: 57900,
+                indoOriginal: 65000,
+                alfaPrice: 54500,
+                alfaOriginal: 65000,
+                updated: false
+            },
+            {
+                id: 24,
+                name: "SGM Eksplor 1+ Madu Susu Pertumbuhan",
+                size: "Box 900g",
+                category: "Kebutuhan Bayi",
+                indoPrice: 82500,
+                indoOriginal: 89000,
+                alfaPrice: 84900,
+                alfaOriginal: null,
+                updated: false
+            }
+        ];
+
+        // --- 2. STATE APLIKASI ---
+        let shoppingCart = {}; // { productId: quantity }
+        let isAutoSyncEnabled = true;
+        let syncIntervalSeconds = 15;
+        let countdownTimer = syncIntervalSeconds;
+        let syncTimerId = null;
+
+        // Category visual styling mapping
+        const categoryMeta = {
+            "Sembako & Minyak": { icon: "fa-wheat-awn", color: "bg-amber-100 text-amber-700" },
+            "Susu & Minuman": { icon: "fa-bottle-water", color: "bg-sky-100 text-sky-700" },
+            "Makanan Ringan": { icon: "fa-cookie-bite", color: "bg-orange-100 text-orange-700" },
+            "Perawatan Tubuh": { icon: "fa-pump-soap", color: "bg-purple-100 text-purple-700" },
+            "Kebersihan Rumah": { icon: "fa-spray-can-sparkles", color: "bg-teal-100 text-teal-700" },
+            "Kebutuhan Bayi": { icon: "fa-baby", color: "bg-pink-100 text-pink-700" }
+        };
+
+        // --- 3. HELPER FORMATTING ---
+        function formatRupiah(amount) {
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
+
+        function getCurrentTimeFormatted() {
+            const now = new Date();
+            return now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' WIB';
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const styles = {
+                success: 'bg-slate-900 text-white border-l-4 border-emerald-500',
+                sync: 'bg-slate-900 text-white border-l-4 border-blue-500',
+                warning: 'bg-slate-900 text-white border-l-4 border-amber-500'
+            };
+
+            const icons = {
+                success: 'fa-circle-check text-emerald-400',
+                sync: 'fa-arrows-rotate text-blue-400',
+                warning: 'fa-circle-info text-amber-400'
+            };
+
+            toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-xs font-medium transition-all duration-300 transform translate-y-2 opacity-0 ${styles[type] || styles.sync}`;
+            toast.innerHTML = `
+                <i class="fa-solid ${icons[type] || icons.sync} text-base"></i>
+                <span class="flex-1 leading-relaxed">${message}</span>
+            `;
+
+            container.appendChild(toast);
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3200);
+        }
+
+        // --- 4. AUTO-SYNC & DYNAMIC PRICE SIMULATION ---
+        function startAutoSyncTimer() {
+            if (syncTimerId) clearInterval(syncTimerId);
+            syncTimerId = setInterval(() => {
+                if (!isAutoSyncEnabled) return;
+                countdownTimer--;
+                document.getElementById('sync-countdown').textContent = `${countdownTimer}d`;
+                
+                if (countdownTimer <= 0) {
+                    performSync(true);
+                    countdownTimer = syncIntervalSeconds;
+                }
+            }, 1000);
+        }
+
+        function toggleAutoSync() {
+            const toggle = document.getElementById('autosync-toggle');
+            isAutoSyncEnabled = toggle.checked;
+            
+            const ping = document.getElementById('sync-ping');
+            const dot = document.getElementById('sync-dot');
+            const statusText = document.getElementById('sync-status-text');
+            const countdownEl = document.getElementById('sync-countdown');
+
+            if (isAutoSyncEnabled) {
+                ping.classList.remove('hidden');
+                dot.classList.replace('bg-slate-400', 'bg-emerald-500');
+                statusText.textContent = 'Live Auto-Sync';
+                statusText.classList.replace('text-slate-500', 'text-emerald-700');
+                countdownEl.classList.remove('hidden');
+                countdownTimer = syncIntervalSeconds;
+                countdownEl.textContent = `${countdownTimer}d`;
+                showToast('Sinkronisasi otomatis diaktifkan (setiap 15 detik).', 'success');
+            } else {
+                ping.classList.add('hidden');
+                dot.classList.replace('bg-emerald-500', 'bg-slate-400');
+                statusText.textContent = 'Auto-Sync Nonaktif';
+                statusText.classList.replace('text-emerald-700', 'text-slate-500');
+                countdownEl.classList.add('hidden');
+                showToast('Sinkronisasi otomatis dijeda.', 'warning');
+            }
+        }
+
+        function triggerManualSync() {
+            countdownTimer = syncIntervalSeconds;
+            if (isAutoSyncEnabled) {
+                document.getElementById('sync-countdown').textContent = `${countdownTimer}d`;
+            }
+            performSync(false);
+        }
+
+        function performSync(isAutomatic = false) {
+            const syncIcon = document.getElementById('sync-icon');
+            const syncBtn = document.getElementById('manual-sync-btn');
+            
+            syncIcon.classList.add('fa-spin');
+            syncBtn.disabled = true;
+            syncBtn.classList.add('opacity-80');
+
+            // Reset previous updated flags
+            products.forEach(p => p.updated = false);
+
+            setTimeout(() => {
+                // Simulate 2 to 4 random products having price updates / flash sales
+                const numUpdates = Math.floor(Math.random() * 3) + 2;
+                const updatedNames = [];
+
+                for (let i = 0; i < numUpdates; i++) {
+                    const randomIndex = Math.floor(Math.random() * products.length);
+                    const item = products[randomIndex];
+                    if (item.updated) continue;
+
+                    const targetStore = Math.random() > 0.5 ? 'indo' : 'alfa';
+                    // Price change between -2000 and +1500 (rounded to 100)
+                    const delta = (Math.floor(Math.random() * 36) - 20) * 100;
+                    
+                    if (delta !== 0) {
+                        if (targetStore === 'indo') {
+                            const oldPrice = item.indoPrice;
+                            const newPrice = Math.max(2000, oldPrice + delta);
+                            if (newPrice < oldPrice && !item.indoOriginal) {
+                                item.indoOriginal = oldPrice;
+                            } else if (newPrice >= (item.indoOriginal || 0)) {
+                                item.indoOriginal = null;
+                            }
+                            item.indoPrice = newPrice;
+                        } else {
+                            const oldPrice = item.alfaPrice;
+                            const newPrice = Math.max(2000, oldPrice + delta);
+                            if (newPrice < oldPrice && !item.alfaOriginal) {
+                                item.alfaOriginal = oldPrice;
+                            } else if (newPrice >= (item.alfaOriginal || 0)) {
+                                item.alfaOriginal = null;
+                            }
+                            item.alfaPrice = newPrice;
+                        }
+                        item.updated = true;
+                        updatedNames.push(item.name);
+                    }
+                }
+
+                // Update timestamp
+                document.getElementById('last-sync-time').textContent = getCurrentTimeFormatted();
+
+                // Re-render UI
+                updateDashboardStats();
+                applyFilters();
+                renderCart();
+
+                syncIcon.classList.remove('fa-spin');
+                syncBtn.disabled = false;
+                syncBtn.classList.remove('opacity-80');
+
+                if (updatedNames.length > 0) {
+                    const prefix = isAutomatic ? 'Auto-Sync:' : 'Sinkronisasi selesai:';
+                    showToast(`${prefix} ${updatedNames.length} harga diperbarui (${updatedNames[0]}).`, 'sync');
+                } else if (!isAutomatic) {
+                    showToast('Semua harga Indomaret & Alfamart sudah paling mutakhir.', 'success');
+                }
+            }, 550);
+        }
+
+        // --- 5. DASHBOARD STATS CALCULATION ---
+        function updateDashboardStats() {
+            const total = products.length;
+            let indoWins = 0;
+            let alfaWins = 0;
+            let equalCount = 0;
+            let totalDiff = 0;
+            let maxDiff = 0;
+            let promoCount = 0;
+
+            products.forEach(p => {
+                const diff = Math.abs(p.indoPrice - p.alfaPrice);
+                totalDiff += diff;
+                if (diff > maxDiff) maxDiff = diff;
+
+                if (p.indoPrice < p.alfaPrice) indoWins++;
+                else if (p.alfaPrice < p.indoPrice) alfaWins++;
+                else equalCount++;
+
+                if (p.indoOriginal || p.alfaOriginal) promoCount++;
+            });
+
+            const avgDiff = total > 0 ? Math.round(totalDiff / total) : 0;
+
+            document.getElementById('stat-total-products').textContent = total;
+            document.getElementById('stat-avg-diff').textContent = formatRupiah(avgDiff);
+            document.getElementById('stat-max-diff').textContent = `Selisih tertinggi: ${formatRupiah(maxDiff)}`;
+            document.getElementById('stat-promo-count').textContent = promoCount;
+
+            // Update quick pill counters
+            document.getElementById('count-indo-win').textContent = indoWins;
+            document.getElementById('count-alfa-win').textContent = alfaWins;
+            document.getElementById('count-equal-win').textContent = equalCount;
+
+            // Determine Cheapest Store Overall
+            const storeEl = document.getElementById('stat-cheapest-store');
+            const detailEl = document.getElementById('stat-cheapest-detail');
+            const iconBox = document.getElementById('stat-cheapest-icon-box');
+
+            if (indoWins > alfaWins) {
+                storeEl.textContent = "Indomaret";
+                storeEl.className = "text-xl sm:text-2xl font-extrabold text-indomaret-blue mt-1";
+                detailEl.textContent = `Unggul di ${indoWins} dari ${total} produk`;
+                iconBox.className = "w-11 h-11 rounded-xl bg-blue-50 text-indomaret-blue flex items-center justify-center text-lg";
+            } else if (alfaWins > indoWins) {
+                storeEl.textContent = "Alfamart";
+                storeEl.className = "text-xl sm:text-2xl font-extrabold text-alfamart-red mt-1";
+                detailEl.textContent = `Unggul di ${alfaWins} dari ${total} produk`;
+                iconBox.className = "w-11 h-11 rounded-xl bg-red-50 text-alfamart-red flex items-center justify-center text-lg";
+            } else {
+                storeEl.textContent = "Seimbang";
+                storeEl.className = "text-xl sm:text-2xl font-extrabold text-slate-800 mt-1";
+                detailEl.textContent = `Masing-masing unggul di ${indoWins} produk`;
+                iconBox.className = "w-11 h-11 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center text-lg";
+            }
+        }
+
+        // --- 6. FILTER, SEARCH & RENDER PRODUCT CARDS ---
+        function setStoreFilter(storeVal) {
+            document.getElementById('store-filter').value = storeVal;
+            
+            // Update pill active styling
+            document.querySelectorAll('.store-pill').forEach(btn => {
+                const s = btn.getAttribute('data-store');
+                if (s === storeVal) {
+                    btn.className = 'store-pill px-3 py-1 rounded-full font-semibold bg-slate-900 text-white transition cursor-pointer';
+                } else {
+                    if (s === 'indomaret') btn.className = 'store-pill px-3 py-1 rounded-full font-semibold bg-blue-50 text-indomaret-blue hover:bg-blue-100 transition cursor-pointer';
+                    else if (s === 'alfamart') btn.className = 'store-pill px-3 py-1 rounded-full font-semibold bg-red-50 text-alfamart-red hover:bg-red-100 transition cursor-pointer';
+                    else btn.className = 'store-pill px-3 py-1 rounded-full font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition cursor-pointer';
+                }
+            });
+
+            applyFilters();
+        }
+
+        function clearSearch() {
+            document.getElementById('search-input').value = '';
+            applyFilters();
+        }
+
+        function resetAllFilters() {
+            document.getElementById('search-input').value = '';
+            document.getElementById('category-filter').value = 'all';
+            document.getElementById('sort-filter').value = 'diff-desc';
+            setStoreFilter('all');
+        }
+
+        function applyFilters() {
+            const searchQuery = document.getElementById('search-input').value.trim().toLowerCase();
+            const categoryVal = document.getElementById('category-filter').value;
+            const storeVal = document.getElementById('store-filter').value;
+            const sortVal = document.getElementById('sort-filter').value;
+
+            // Toggle clear search button
+            const clearBtn = document.getElementById('clear-search-btn');
+            if (searchQuery.length > 0) clearBtn.classList.remove('hidden');
+            else clearBtn.classList.add('hidden');
+
+            // Filter
+            let filtered = products.filter(p => {
+                const matchSearch = p.name.toLowerCase().includes(searchQuery) || 
+                                    p.size.toLowerCase().includes(searchQuery) || 
+                                    p.category.toLowerCase().includes(searchQuery);
+                const matchCategory = categoryVal === 'all' || p.category === categoryVal;
+                
+                let matchStore = true;
+                if (storeVal === 'indomaret') matchStore = p.indoPrice < p.alfaPrice;
+                else if (storeVal === 'alfamart') matchStore = p.alfaPrice < p.indoPrice;
+                else if (storeVal === 'equal') matchStore = p.indoPrice === p.alfaPrice;
+
+                return matchSearch && matchCategory && matchStore;
+            });
+
+            // Sort
+            filtered.sort((a, b) => {
+                const diffA = Math.abs(a.indoPrice - a.alfaPrice);
+                const diffB = Math.abs(b.indoPrice - b.alfaPrice);
+                const minA = Math.min(a.indoPrice, a.alfaPrice);
+                const minB = Math.min(b.indoPrice, b.alfaPrice);
+
+                if (sortVal === 'diff-desc') return diffB - diffA;
+                if (sortVal === 'cheapest-asc') return minA - minB;
+                if (sortVal === 'cheapest-desc') return minB - minA;
+                if (sortVal === 'name-asc') return a.name.localeCompare(b.name);
+                return 0;
+            });
+
+            document.getElementById('showing-count').textContent = filtered.length;
+            renderProductGrid(filtered);
+        }
+
+        function renderProductGrid(items) {
+            const grid = document.getElementById('products-grid');
+            const emptyState = document.getElementById('empty-state');
+
+            if (items.length === 0) {
+                grid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            grid.innerHTML = items.map(p => {
+                const meta = categoryMeta[p.category] || { icon: "fa-box", color: "bg-slate-100 text-slate-700" };
+                const diff = Math.abs(p.indoPrice - p.alfaPrice);
+                const maxPrice = Math.max(p.indoPrice, p.alfaPrice);
+                const percentSave = maxPrice > 0 ? Math.round((diff / maxPrice) * 100) : 0;
+
+                const indoCheaper = p.indoPrice < p.alfaPrice;
+                const alfaCheaper = p.alfaPrice < p.indoPrice;
+                const isEqual = p.indoPrice === p.alfaPrice;
+
+                const qtyInCart = shoppingCart[p.id] || 0;
+                const flashClass = p.updated ? 'animate-flash-green ring-2 ring-emerald-400' : '';
+
+                // Savings Banner
+                let savingsBanner = '';
+                if (indoCheaper) {
+                    savingsBanner = `
+                        <div class="flex items-center justify-between px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold">
+                            <span class="flex items-center gap-1.5">
+                                <i class="fa-solid fa-crown text-amber-500"></i>
+                                Hemat <span class="font-extrabold">${formatRupiah(diff)}</span> (${percentSave}%)
+                            </span>
+                            <span class="text-[11px] font-bold text-indomaret-blue bg-white px-2 py-0.5 rounded-md border border-blue-100">di Indomaret</span>
+                        </div>
+                    `;
+                } else if (alfaCheaper) {
+                    savingsBanner = `
+                        <div class="flex items-center justify-between px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold">
+                            <span class="flex items-center gap-1.5">
+                                <i class="fa-solid fa-crown text-amber-500"></i>
+                                Hemat <span class="font-extrabold">${formatRupiah(diff)}</span> (${percentSave}%)
+                            </span>
+                            <span class="text-[11px] font-bold text-alfamart-red bg-white px-2 py-0.5 rounded-md border border-red-100">di Alfamart</span>
+                        </div>
+                    `;
+                } else {
+                    savingsBanner = `
+                        <div class="flex items-center justify-between px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 text-xs font-medium">
+                            <span><i class="fa-solid fa-equals mr-1.5 text-slate-400"></i>Harga sama di kedua gerai</span>
+                            <span class="text-[11px] font-semibold">Selisih Rp 0</span>
+                        </div>
+                    `;
+                }
+
+                return `
+                <article class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs hover:shadow-md transition-all flex flex-col justify-between gap-4 ${flashClass}">
+                    <!-- Top: Category & Product Info -->
+                    <div class="space-y-3">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex items-center gap-3">
+                                <div class="w-11 h-11 rounded-xl ${meta.color} flex items-center justify-center text-lg shrink-0">
+                                    <i class="fa-solid ${meta.icon}"></i>
+                                </div>
+                                <div>
+                                    <span class="inline-block text-[10px] font-bold uppercase tracking-wider text-slate-400">${p.category}</span>
+                                    <h3 class="text-sm sm:text-base font-bold text-slate-900 leading-snug line-clamp-2">${p.name}</h3>
+                                    <p class="text-xs text-slate-500 font-medium mt-0.5">${p.size}</p>
+                                </div>
+                            </div>
+                            ${p.updated ? `<span class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700"><i class="fa-solid fa-bolt"></i> Baru</span>` : ''}
+                        </div>
+
+                        <!-- Price Comparison Boxes -->
+                        <div class="grid grid-cols-2 gap-2.5 pt-1">
+                            <!-- Indomaret Box -->
+                            <div class="relative rounded-xl p-3 border transition ${indoCheaper ? 'bg-blue-50/70 border-indomaret-blue ring-1 ring-indomaret-blue/30' : 'bg-slate-50/70 border-slate-200'}">
+                                ${indoCheaper ? `
+                                    <span class="absolute -top-2.5 left-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-600 text-white shadow-xs">
+                                        <i class="fa-solid fa-check"></i> TERMURAH
+                                    </span>
+                                ` : ''}
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-[11px] font-extrabold text-indomaret-blue tracking-tight">INDOMARET</span>
+                                    ${p.indoOriginal ? `<span class="text-[10px] font-bold bg-indomaret-yellow text-slate-900 px-1.5 rounded">PROMO</span>` : ''}
+                                </div>
+                                <div class="mt-1">
+                                    ${p.indoOriginal ? `<div class="text-[11px] text-slate-400 line-through">${formatRupiah(p.indoOriginal)}</div>` : `<div class="h-4"></div>`}
+                                    <div class="text-base sm:text-lg font-extrabold ${indoCheaper ? 'text-indomaret-blue' : 'text-slate-800'}">
+                                        ${formatRupiah(p.indoPrice)}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Alfamart Box -->
+                            <div class="relative rounded-xl p-3 border transition ${alfaCheaper ? 'bg-red-50/70 border-alfamart-red ring-1 ring-alfamart-red/30' : 'bg-slate-50/70 border-slate-200'}">
+                                ${alfaCheaper ? `
+                                    <span class="absolute -top-2.5 left-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-600 text-white shadow-xs">
+                                        <i class="fa-solid fa-check"></i> TERMURAH
+                                    </span>
+                                ` : ''}
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-[11px] font-extrabold text-alfamart-red tracking-tight">ALFAMART</span>
+                                    ${p.alfaOriginal ? `<span class="text-[10px] font-bold bg-alfamart-yellow text-slate-900 px-1.5 rounded">PROMO</span>` : ''}
+                                </div>
+                                <div class="mt-1">
+                                    ${p.alfaOriginal ? `<div class="text-[11px] text-slate-400 line-through">${formatRupiah(p.alfaOriginal)}</div>` : `<div class="h-4"></div>`}
+                                    <div class="text-base sm:text-lg font-extrabold ${alfaCheaper ? 'text-alfamart-red' : 'text-slate-800'}">
+                                        ${formatRupiah(p.alfaPrice)}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom: Savings Indicator & Cart Action -->
+                    <div class="space-y-2.5 pt-1">
+                        ${savingsBanner}
+
+                        ${qtyInCart === 0 ? `
+                            <button onclick="updateCartQty(${p.id}, 1)" class="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white text-xs font-semibold flex items-center justify-center gap-2 transition cursor-pointer">
+                                <i class="fa-solid fa-cart-plus text-emerald-400"></i>
+                                <span>+ Daftar Belanja</span>
+                            </button>
+                        ` : `
+                            <div class="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-1.5">
+                                <span class="text-xs font-bold text-emerald-800"><i class="fa-solid fa-check-circle mr-1"></i>Di Daftar Belanja</span>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="updateCartQty(${p.id}, -1)" class="w-7 h-7 rounded-lg bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-100 font-bold text-sm flex items-center justify-center cursor-pointer">-</button>
+                                    <span class="text-xs font-extrabold text-slate-900 w-5 text-center">${qtyInCart}</span>
+                                    <button onclick="updateCartQty(${p.id}, 1)" class="w-7 h-7 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 font-bold text-sm flex items-center justify-center cursor-pointer">+</button>
+                                </div>
+                            </div>
+                        `}
+                    </div>
+                </article>
+                `;
+            }).join('');
+        }
+
+        // --- 7. SMART SHOPPING LIST (CART DRAWER) ---
+        function toggleCartDrawer() {
+            const drawer = document.getElementById('cart-drawer');
+            const backdrop = document.getElementById('cart-drawer-backdrop');
+            const isClosed = drawer.classList.contains('translate-x-full');
+
+            if (isClosed) {
+                backdrop.classList.remove('hidden');
+                drawer.classList.remove('translate-x-full');
+                renderCart();
+            } else {
+                drawer.classList.add('translate-x-full');
+                backdrop.classList.add('hidden');
+            }
+        }
+
+        function updateCartQty(productId, delta) {
+            const currentQty = shoppingCart[productId] || 0;
+            const newQty = currentQty + delta;
+
+            if (newQty <= 0) {
+                delete shoppingCart[productId];
+            } else {
+                shoppingCart[productId] = newQty;
+                if (currentQty === 0) {
+                    const prod = products.find(p => p.id === productId);
+                    if (prod) showToast(`"${prod.name}" ditambahkan ke Daftar Belanja.`, 'success');
+                }
+            }
+
+            updateCartBadges();
+            applyFilters();
+            renderCart();
+        }
+
+        function clearCart() {
+            shoppingCart = {};
+            updateCartBadges();
+            applyFilters();
+            renderCart();
+            showToast('Daftar belanja dikosongkan.', 'warning');
+        }
+
+        function updateCartBadges() {
+            const totalItems = Object.values(shoppingCart).reduce((sum, qty) => sum + qty, 0);
+            document.getElementById('desktop-cart-badge').textContent = totalItems;
+            document.getElementById('mobile-cart-badge').textContent = totalItems;
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cart-items-container');
+            const entries = Object.entries(shoppingCart);
+
+            let totalIndo = 0;
+            let totalAlfa = 0;
+            let totalSplit = 0;
+
+            if (entries.length === 0) {
+                container.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center text-center py-12 text-slate-400 space-y-2">
+                        <i class="fa-solid fa-basket-shopping text-4xl text-slate-300"></i>
+                        <p class="text-sm font-semibold text-slate-600">Daftar belanja masih kosong</p>
+                        <p class="text-xs max-w-xs">Klik tombol "+ Daftar Belanja" pada produk untuk menghitung perbandingan total belanja & split hemat.</p>
+                    </div>
+                `;
+                document.getElementById('cart-total-indo').textContent = 'Rp 0';
+                document.getElementById('cart-total-alfa').textContent = 'Rp 0';
+                document.getElementById('cart-total-split').textContent = 'Rp 0';
+                document.getElementById('cart-savings-note').textContent = 'Tambahkan barang untuk melihat potensi penghematan maksimal!';
+                return;
+            }
+
+            container.innerHTML = entries.map(([idStr, qty]) => {
+                const p = products.find(item => item.id === Number(idStr));
+                if (!p) return '';
+
+                const subIndo = p.indoPrice * qty;
+                const subAlfa = p.alfaPrice * qty;
+                const minUnit = Math.min(p.indoPrice, p.alfaPrice);
+                const subSplit = minUnit * qty;
+
+                totalIndo += subIndo;
+                totalAlfa += subAlfa;
+                totalSplit += subSplit;
+
+                let bestLabel = '';
+                if (p.indoPrice < p.alfaPrice) {
+                    bestLabel = `<span class="text-[10px] font-bold text-indomaret-blue bg-blue-50 px-1.5 py-0.5 rounded">Beli di Indomaret</span>`;
+                } else if (p.alfaPrice < p.indoPrice) {
+                    bestLabel = `<span class="text-[10px] font-bold text-alfamart-red bg-red-50 px-1.5 py-0.5 rounded">Beli di Alfamart</span>`;
+                } else {
+                    bestLabel = `<span class="text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">Keduanya Sama</span>`;
+                }
+
+                return `
+                    <div class="p-3 rounded-xl bg-white border border-slate-200 flex items-center justify-between gap-3 shadow-2xs">
+                        <div class="min-w-0 flex-1">
+                            <h4 class="text-xs font-bold text-slate-900 truncate">${p.name}</h4>
+                            <p class="text-[11px] text-slate-500">${p.size} • Termurah: <strong class="text-emerald-700">${formatRupiah(minUnit)}</strong></p>
+                            <div class="mt-1">${bestLabel}</div>
+                        </div>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            <button onclick="updateCartQty(${p.id}, -1)" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer">-</button>
+                            <span class="w-6 text-center text-xs font-extrabold">${qty}</span>
+                            <button onclick="updateCartQty(${p.id}, 1)" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer">+</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('cart-total-indo').textContent = formatRupiah(totalIndo);
+            document.getElementById('cart-total-alfa').textContent = formatRupiah(totalAlfa);
+            document.getElementById('cart-total-split').textContent = formatRupiah(totalSplit);
+
+            const highestTotal = Math.max(totalIndo, totalAlfa);
+            const maxSavings = highestTotal - totalSplit;
+
+            const noteEl = document.getElementById('cart-savings-note');
+            if (maxSavings > 0) {
+                noteEl.innerHTML = `Anda hemat maksimal <strong>${formatRupiah(maxSavings)}</strong> dengan metode Split Belanja!`;
+            } else {
+                noteEl.textContent = 'Total belanja sama di kedua gerai.';
+            }
+        }
+
+        function copyShoppingList() {
+            const entries = Object.entries(shoppingCart);
+            if (entries.length === 0) {
+                showToast('Daftar belanja masih kosong untuk disalin.', 'warning');
+                return;
+            }
+
+            let text = "🛒 DAFTAR BELANJA PINTAR (BandingHarga ID)\n";
+            text += "=========================================\n";
+            let totalSplit = 0;
+
+            entries.forEach(([idStr, qty]) => {
+                const p = products.find(item => item.id === Number(idStr));
+                if (!p) return;
+                const bestStore = p.indoPrice < p.alfaPrice ? "Indomaret" : (p.alfaPrice < p.indoPrice ? "Alfamart" : "Indomaret/Alfamart");
+                const bestPrice = Math.min(p.indoPrice, p.alfaPrice);
+                totalSplit += bestPrice * qty;
+                text += `• ${p.name} (${p.size}) x${qty} -> ${formatRupiah(bestPrice * qty)} [${bestStore}]\n`;
+            });
+
+            text += "=========================================\n";
+            text += `💰 Estimasi Total Termurah (Split): ${formatRupiah(totalSplit)}`;
+
+            const tempArea = document.createElement('textarea');
+            tempArea.value = text;
+            document.body.appendChild(tempArea);
+            tempArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempArea);
+
+            showToast('Daftar belanja berhasil disalin ke clipboard!', 'success');
+        }
+
+        // --- 8. ADD CUSTOM PRODUCT MODAL ---
+        function openAddModal() {
+            document.getElementById('add-modal').classList.remove('hidden');
+        }
+
+        function closeAddModal() {
+            document.getElementById('add-modal').classList.add('hidden');
+            document.getElementById('add-product-form').reset();
+        }
+
+        function handleAddProduct(e) {
+            e.preventDefault();
+            const name = document.getElementById('new-name').value.trim();
+            const category = document.getElementById('new-category').value;
+            const size = document.getElementById('new-size').value.trim();
+            const indoPrice = parseInt(document.getElementById('new-indo-price').value, 10);
+            const alfaPrice = parseInt(document.getElementById('new-alfa-price').value, 10);
+
+            if (!name || !size || isNaN(indoPrice) || isNaN(alfaPrice)) return;
+
+            const newProduct = {
+                id: Date.now(),
+                name,
+                size,
+                category,
+                indoPrice,
+                indoOriginal: null,
+                alfaPrice,
+                alfaOriginal: null,
+                updated: true
+            };
+
+            products.unshift(newProduct);
+            closeAddModal();
+            updateDashboardStats();
+            applyFilters();
+            showToast(`"${name}" ditambahkan & masuk ke sinkronisasi otomatis!`, 'success');
+        }
+
+        // --- 9. INITIALIZATION ON LOAD ---
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('last-sync-time').textContent = getCurrentTimeFormatted();
+            updateDashboardStats();
+            applyFilters();
+            startAutoSyncTimer();
+        });
+    </script>
+</body>
+</html>
